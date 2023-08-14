@@ -1,0 +1,24 @@
+:root {
+    /* dark  theme */
+    --dark-blue-elements: hsl(209, 23%, 22%);
+    --dark-mode-bg: hsl(207, 26%, 17%);
+
+    /* light theme */
+    --color-white: hsl(0, 0%, 100%);
+    --backgroundSelect: White;
+    --background : hsl(0, 0%, 98%);
+    --text-primary : hsl(200, 15%, 8%);
+    --border : hsl(0, 0%, 52%);
+    --backgroundcard :hsl(0, 0%, 100%);
+    --backgroundnav: White;
+    
+}
+
+[data-theme='dark']{
+    --backgroundnav: #09304b;
+    --backgroundcard :#2b3945;
+    --backgroundSelect: hsl(207, 26%, 17%);
+    --background : #202c37;
+    --text-primary : hsl(0, 0%, 98%);
+    --border : hsl(200, 15%, 8%);
+}
