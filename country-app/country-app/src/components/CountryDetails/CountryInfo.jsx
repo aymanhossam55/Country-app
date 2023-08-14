@@ -94,14 +94,17 @@ const CountryInfo = (
                       </h4>
                       </div>
                     </div>
-                    <p className="border-country"><h4 className="border-special">Border Countries: </h4><span> 
+                    <p className="border-country">
+                        <h4 className="border-special">Border Countries: </h4>
+                        <span className="country"> 
                         {country.borders && country.borders.map((border) => (    
                             <Link to={`/country/${border}`}>
-                                <span className="country">{border}</span>
+                                <span className="">{border}</span>
                             </Link>
                         ))}
         
-                    </span></p>
+                        </span>
+                    </p>
         
                   </div>
         
