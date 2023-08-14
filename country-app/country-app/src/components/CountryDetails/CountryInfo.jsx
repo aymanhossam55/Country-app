@@ -59,18 +59,19 @@ const CountryInfo = (
                     <h3>{country.name.common}</h3>
         
                     <div className="country__info-left">
-                        <div>
+                    <div>
+                        <h4>
+                        Official-Name: <span>{country.name.official}</span>
+                      </h4>
                       <h4>
-                        Population:{" "}
+                        population :{" "}
                         <span>
                           {country.population}
                         </span>
                       </h4>
+
                       <h4>
                         Region: <span>{country.region}</span>
-                      </h4>
-                      <h4>
-                        Sub Region: <span>{country.subregion}</span>
                       </h4>
                       <h4>
                         Capital: <span>{country.capital}</span>
@@ -78,16 +79,16 @@ const CountryInfo = (
                       </div>
                         <div>
                       <h4>
-                        Population:{" "}
+                        status:{" "}
                         <span>
-                          {country.population}
+                          {country.status}
                         </span>
                       </h4>
                       <h4>
-                        Region: <span>{country.region}</span>
+                        Region: <span>{country.subregion}</span>
                       </h4>
                       <h4>
-                        Sub Region: <span>{country.subregion}</span>
+                        Timezone: <span>{country.timezones}</span>
                       </h4>
                       <h4>
                         Capital: <span>{country.capital}</span>
