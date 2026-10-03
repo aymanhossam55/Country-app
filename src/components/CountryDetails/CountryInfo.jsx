@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import {
     Link,
     useNavigate,
@@ -9,32 +10,27 @@ import { apiHeaders, apiURL } from "../Url/api";
 
 const CountryInfo = () => {
     const { countryName } = useParams();
-
     const navigate = useNavigate();
 
     const [country, setCountry] = useState(null);
-
-    const [isLoading, setIsLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
+    const [borderCountries, setBorderCountries] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
 
     useEffect(() => {
-        const controller =
-            new AbortController();
+        const controller = new AbortController();
 
         const getCountry = async () => {
             setIsLoading(true);
             setError("");
             setCountry(null);
+            setBorderCountries([]);
 
             try {
                 const decodedName =
-                    decodeURIComponent(
-                        countryName
-                    );
+                    decodeURIComponent(countryName);
 
+                // Get country by common name
                 let response = await fetch(
                     `${apiURL}/names.common/${encodeURIComponent(
                         decodedName
@@ -45,11 +41,7 @@ const CountryInfo = () => {
                     }
                 );
 
-                /*
-                    If searching by country name fails,
-                    try the URL parameter as an alpha-3 code.
-                */
-
+                // If name doesn't work, try alpha-3 code
                 if (!response.ok) {
                     response = await fetch(
                         `${apiURL}/codes.alpha_3/${encodeURIComponent(
@@ -62,13 +54,11 @@ const CountryInfo = () => {
                     );
                 }
 
-                const result =
-                    await response.json();
+                const result = await response.json();
 
                 if (!response.ok) {
                     throw new Error(
-                        result?.errors?.[0]
-                            ?.message ||
+                        result?.errors?.[0]?.message ||
                             "Country not found."
                     );
                 }
@@ -82,7 +72,81 @@ const CountryInfo = () => {
                     );
                 }
 
+                /*
+                 * Save the main country
+                 */
                 setCountry(countryData);
+
+                /*
+                 * borders contains alpha-3 codes.
+                 *
+                 * Example:
+                 *
+                 * borders: ["DZA", "LBY", "TUN"]
+                 *
+                 * We need to convert them to:
+                 *
+                 * Algeria
+                 * Libya
+                 * Tunisia
+                 */
+                const borders =
+                    countryData?.borders || [];
+
+                if (borders.length > 0) {
+                    const borderCountriesData =
+                        await Promise.all(
+                            borders.map(
+                                async (borderCode) => {
+                                    try {
+                                        const borderResponse =
+                                            await fetch(
+                                                `${apiURL}/codes.alpha_3/${encodeURIComponent(
+                                                    borderCode
+                                                )}`,
+                                                {
+                                                    headers:
+                                                        apiHeaders,
+                                                    signal:
+                                                        controller.signal,
+                                                }
+                                            );
+
+                                        if (
+                                            !borderResponse.ok
+                                        ) {
+                                            return null;
+                                        }
+
+                                        const borderResult =
+                                            await borderResponse.json();
+
+                                        return (
+                                            borderResult
+                                                ?.data
+                                                ?.objects?.[0] ||
+                                            null
+                                        );
+                                    } catch (err) {
+                                        if (
+                                            err.name ===
+                                            "AbortError"
+                                        ) {
+                                            throw err;
+                                        }
+
+                                        return null;
+                                    }
+                                }
+                            )
+                        );
+
+                    setBorderCountries(
+                        borderCountriesData.filter(
+                            Boolean
+                        )
+                    );
+                }
             } catch (err) {
                 if (
                     err.name ===
@@ -122,7 +186,9 @@ const CountryInfo = () => {
         const currencies =
             country?.currencies;
 
-        if (!Array.isArray(currencies)) {
+        if (
+            !Array.isArray(currencies)
+        ) {
             return "N/A";
         }
 
@@ -142,7 +208,9 @@ const CountryInfo = () => {
         const languages =
             country?.languages;
 
-        if (!Array.isArray(languages)) {
+        if (
+            !Array.isArray(languages)
+        ) {
             return "N/A";
         }
 
@@ -161,6 +229,9 @@ const CountryInfo = () => {
         );
     };
 
+    /*
+     * LOADING
+     */
     if (isLoading) {
         return (
             <main className="country__info__wrapper">
@@ -175,9 +246,13 @@ const CountryInfo = () => {
 
                     <div className="detail__skeleton-content">
                         <div className="skeleton skeleton__title" />
+
                         <div className="skeleton skeleton__line" />
+
                         <div className="skeleton skeleton__line" />
+
                         <div className="skeleton skeleton__line" />
+
                         <div className="skeleton skeleton__line short" />
                     </div>
                 </div>
@@ -185,6 +260,9 @@ const CountryInfo = () => {
         );
     }
 
+    /*
+     * ERROR
+     */
     if (error || !country) {
         return (
             <main className="country__info__wrapper">
@@ -221,6 +299,9 @@ const CountryInfo = () => {
         );
     }
 
+    /*
+     * COUNTRY DATA
+     */
     const name =
         country?.names?.common ||
         "Unknown country";
@@ -252,11 +333,11 @@ const CountryInfo = () => {
         country?.timezones?.join(", ") ||
         "N/A";
 
-    const borders =
-        country?.borders || [];
-
     return (
         <main className="country__info__wrapper">
+
+            {/* BACK BUTTON */}
+
             <div className="detail__back">
                 <Link to="/">
                     <span>←</span>
@@ -264,7 +345,13 @@ const CountryInfo = () => {
                 </Link>
             </div>
 
+
+            {/* COUNTRY INFORMATION */}
+
             <section className="country__info__container">
+
+                {/* FLAG */}
+
                 <div className="country__info-img">
                     {flag ? (
                         <img
@@ -288,18 +375,26 @@ const CountryInfo = () => {
                     </div>
                 </div>
 
+
+                {/* COUNTRY DETAILS */}
+
                 <div className="country__info">
+
                     <span className="detail__eyebrow">
                         COUNTRY PROFILE
                     </span>
 
-                    <h1>{name}</h1>
+                    <h1>
+                        {name}
+                    </h1>
 
                     <p className="official__name">
                         {officialName}
                     </p>
 
+
                     <div className="country__info-grid">
+
                         <div className="info__item">
                             <span>
                                 Population
@@ -312,6 +407,7 @@ const CountryInfo = () => {
                             </strong>
                         </div>
 
+
                         <div className="info__item">
                             <span>
                                 Region
@@ -321,6 +417,7 @@ const CountryInfo = () => {
                                 {region}
                             </strong>
                         </div>
+
 
                         <div className="info__item">
                             <span>
@@ -332,6 +429,7 @@ const CountryInfo = () => {
                             </strong>
                         </div>
 
+
                         <div className="info__item">
                             <span>
                                 Capital
@@ -341,6 +439,7 @@ const CountryInfo = () => {
                                 {getCapital()}
                             </strong>
                         </div>
+
 
                         <div className="info__item">
                             <span>
@@ -352,6 +451,7 @@ const CountryInfo = () => {
                             </strong>
                         </div>
 
+
                         <div className="info__item">
                             <span>
                                 Languages
@@ -362,6 +462,7 @@ const CountryInfo = () => {
                             </strong>
                         </div>
 
+
                         <div className="info__item">
                             <span>
                                 Timezones
@@ -371,6 +472,7 @@ const CountryInfo = () => {
                                 {timezones}
                             </strong>
                         </div>
+
 
                         <div className="info__item">
                             <span>
@@ -383,11 +485,18 @@ const CountryInfo = () => {
                                     : "No"}
                             </strong>
                         </div>
+
                     </div>
+
                 </div>
+
             </section>
 
+
+            {/* BORDER COUNTRIES */}
+
             <section className="border__section">
+
                 <div>
                     <span className="section__eyebrow">
                         GEOGRAPHY
@@ -398,30 +507,64 @@ const CountryInfo = () => {
                     </h2>
                 </div>
 
-                {borders.length > 0 ? (
+
+                {borderCountries.length > 0 ? (
+
                     <div className="border__list">
-                        {borders.map(
-                            (border) => (
-                                <Link
-                                    key={border}
-                                    to={`/country/${border}`}
-                                    className="border__country"
-                                >
-                                    {border}
-                                    <span>
-                                        →
-                                    </span>
-                                </Link>
-                            )
+
+                        {borderCountries.map(
+                            (borderCountry) => {
+
+                                const borderName =
+                                    borderCountry
+                                        ?.names
+                                        ?.common;
+
+                                const borderCode =
+                                    borderCountry
+                                        ?.codes
+                                        ?.alpha_3;
+
+                                if (!borderName) {
+                                    return null;
+                                }
+
+                                return (
+                                    <Link
+                                        key={
+                                            borderCode ||
+                                            borderName
+                                        }
+                                        to={`/country/${encodeURIComponent(
+                                            borderName
+                                        )}`}
+                                        className="border__country"
+                                    >
+                                        <span>
+                                            {borderName}
+                                        </span>
+
+                                        <span>
+                                            →
+                                        </span>
+                                    </Link>
+                                );
+                            }
                         )}
+
                     </div>
+
                 ) : (
+
                     <p className="no__borders">
                         This country has no
                         land borders.
                     </p>
+
                 )}
+
             </section>
+
         </main>
     );
 };
