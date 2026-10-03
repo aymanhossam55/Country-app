@@ -1,108 +1,343 @@
-import React, { useState, useEffect } from "react";
-import { apiURL } from "../Url/api";
-import SearchInput from "../Search";
-import FilterCountry from "../Filter";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { apiHeaders, apiURL } from "../Url/api";
+import SearchInput from "../Search";
+import FilterCountry from "../Filter";
+
 const AllCountries = () => {
-  const [countries, setCountries] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+    const [countries, setCountries] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
 
-  const getAllCountries = async () => {
-    try {
-      const res = await fetch(`${apiURL}/all`);
+    const fetchCountries = useCallback(async (url, signal) => {
+        setIsLoading(true);
+        setError("");
 
+        try {
+            const response = await fetch(url, {
+                headers: apiHeaders,
+                signal,
+            });
 
-      const data = await res.json();
+            const result = await response.json();
 
-    //   console.log(data);
+            if (!response.ok) {
+                throw new Error(
+                    result?.errors?.[0]?.message ||
+                        "Unable to load countries."
+                );
+            }
 
-      setCountries(data);
+            const countryList = result?.data?.objects || [];
 
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      setError(error.message);
-    }
-  };
+            setCountries(countryList);
 
-  const getCountryByName = async (countryName) => {
-    try {
-      const res = await fetch(`${apiURL}/name/${countryName}`);
+            if (!countryList.length) {
+                setError("No countries found.");
+            }
+        } catch (err) {
+            if (err.name === "AbortError") {
+                return;
+            }
 
-      if (!res.ok) throw new Error("Not found any country!");
+            setCountries([]);
+            setError(err.message || "Something went wrong.");
+        } finally {
+            if (!signal.aborted) {
+                setIsLoading(false);
+            }
+        }
+    }, []);
 
-      const data = await res.json();
-      setCountries(data);
+    const getAllCountries = useCallback(() => {
+        const controller = new AbortController();
 
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      setError(error.message);
-    }
-  };
+        fetchCountries(
+            `${apiURL}?limit=100`,
+            controller.signal
+        );
 
-  const getCountryByRegion = async (regionName) => {
-    try {
-      const res = await fetch(`${apiURL}/region/${regionName}`);
+        return controller;
+    }, [fetchCountries]);
 
-      if (!res.ok) throw new Error("Failed..........");
+    const getCountryByName = useCallback(
+        async (countryName) => {
+            const value = countryName.trim();
 
-      const data = await res.json();
-      setCountries(data);
+            if (!value) {
+                const controller = getAllCountries();
+                return controller;
+            }
 
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      setError(false);
-    }
-  };
+            const controller = new AbortController();
 
-  useEffect(() => {
-    getAllCountries();
-  }, []);
+            const url =
+                `${apiURL}/name?q=` +
+                encodeURIComponent(value) +
+                `&limit=100`;
 
-  return (
-    <div className="all__country__wrapper">
-      <div className="country__top">
-        <div className="search">
-          <SearchInput onSearch={getCountryByName} />
-        </div>
+            fetchCountries(url, controller.signal);
 
-        <div className="filter">
-          <FilterCountry onSelect={getCountryByRegion} />
-        </div>
-      </div>
+            return controller;
+        },
+        [fetchCountries, getAllCountries]
+    );
 
-    
-      <div className="country__bottom">
-        {isLoading && !error && <h4>Loading........</h4>}
-        {error && !isLoading && <h4>{error}</h4>}
+    const getCountryByRegion = useCallback(
+        async (regionName) => {
+            if (!regionName) {
+                const controller = getAllCountries();
+                return controller;
+            }
 
-        {countries?.map((country) => (
-          <Link to={`/country/${country.name.common}`}>
-            <div className="country__card">
-              <div className="country__img">
-                <img src={country.flags.png} alt="" />
-              </div>
+            const controller = new AbortController();
 
-              <div className="country__data">
-                <h3>{country.name.common}</h3>
-                <h4 className="country-details">
-                  {" "}
-                  Population:{" "}
-                  <span>{country.population}</span>
-                </h4>
-                <h4 className="country-details"> Region: <span>{country.region}</span></h4>
-                <h4 className="country-details">Capital: <span>{country.capital}</span></h4>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
+            const url =
+                `${apiURL}/region/` +
+                encodeURIComponent(regionName) +
+                `?limit=100`;
+
+            fetchCountries(url, controller.signal);
+
+            return controller;
+        },
+        [fetchCountries, getAllCountries]
+    );
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        fetchCountries(
+            `${apiURL}?limit=100`,
+            controller.signal
+        );
+
+        return () => controller.abort();
+    }, [fetchCountries]);
+
+    return (
+        <main className="all__country__wrapper">
+            <section className="country__hero">
+                <div className="hero__content">
+                    <span className="hero__eyebrow">
+                        WORLD EXPLORER
+                    </span>
+
+                    <h1>
+                        Explore the
+                        <span> world.</span>
+                    </h1>
+
+                    <p>
+                        Discover countries, cultures, regions,
+                        populations and more through a beautiful
+                        interactive experience.
+                    </p>
+                </div>
+
+                <div className="hero__globe">
+                    <span>🌎</span>
+                </div>
+            </section>
+
+            <section className="country__toolbar">
+                <div className="search">
+                    <SearchInput
+                        onSearch={getCountryByName}
+                    />
+                </div>
+
+                <div className="filter">
+                    <FilterCountry
+                        onSelect={getCountryByRegion}
+                    />
+                </div>
+            </section>
+
+            <section className="country__section-heading">
+                <div>
+                    <span className="section__eyebrow">
+                        DISCOVER
+                    </span>
+
+                    <h2>Countries of the world</h2>
+                </div>
+
+                {!isLoading && !error && (
+                    <span className="country__count">
+                        {countries.length} countries
+                    </span>
+                )}
+            </section>
+
+            {isLoading && (
+                <div className="country__bottom">
+                    {Array.from({ length: 8 }).map(
+                        (_, index) => (
+                            <div
+                                className="country__card skeleton-card"
+                                key={index}
+                            >
+                                <div className="skeleton skeleton__image" />
+
+                                <div className="skeleton__content">
+                                    <div className="skeleton skeleton__title" />
+                                    <div className="skeleton skeleton__line" />
+                                    <div className="skeleton skeleton__line" />
+                                    <div className="skeleton skeleton__line short" />
+                                </div>
+                            </div>
+                        )
+                    )}
+                </div>
+            )}
+
+            {!isLoading && error && (
+                <div className="state__message error__state">
+                    <div className="state__icon">!</div>
+
+                    <h3>Something went wrong</h3>
+
+                    <p>{error}</p>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            window.location.reload();
+                        }}
+                    >
+                        Try Again
+                    </button>
+                </div>
+            )}
+
+            {!isLoading &&
+                !error &&
+                countries.length === 0 && (
+                    <div className="state__message">
+                        <div className="state__icon">⌕</div>
+
+                        <h3>No countries found</h3>
+
+                        <p>
+                            Try another country name or choose
+                            another region.
+                        </p>
+                    </div>
+                )}
+
+            {!isLoading &&
+                !error &&
+                countries.length > 0 && (
+                    <div className="country__bottom">
+                        {countries.map((country) => {
+                            const name =
+                                country?.names?.common ||
+                                "Unknown country";
+
+                            const officialName =
+                                country?.names?.official ||
+                                name;
+
+                            const capital =
+                                country?.capitals?.[0]?.name ||
+                                "No capital";
+
+                            const flag =
+                                country?.flag?.url_png ||
+                                country?.flag?.url_svg ||
+                                "";
+
+                            const alpha3 =
+                                country?.codes?.alpha_3;
+
+                            return (
+                                <Link
+                                    className="country__link"
+                                    to={`/country/${encodeURIComponent(
+                                        name
+                                    )}`}
+                                    key={
+                                        alpha3 || name
+                                    }
+                                >
+                                    <article className="country__card">
+                                        <div className="country__img">
+                                            {flag ? (
+                                                <img
+                                                    src={flag}
+                                                    alt={`${name} flag`}
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="flag__fallback">
+                                                    🌐
+                                                </div>
+                                            )}
+
+                                            <span className="country__code">
+                                                {alpha3 || "---"}
+                                            </span>
+                                        </div>
+
+                                        <div className="country__data">
+                                            <span className="country__official">
+                                                {officialName}
+                                            </span>
+
+                                            <h3>{name}</h3>
+
+                                            <div className="country__details">
+                                                <div>
+                                                    <span>
+                                                        Population
+                                                    </span>
+
+                                                    <strong>
+                                                        {Number(
+                                                            country.population ||
+                                                                0
+                                                        ).toLocaleString()}
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <span>
+                                                        Region
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            country.region
+                                                        }
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <span>
+                                                        Capital
+                                                    </span>
+
+                                                    <strong>
+                                                        {capital}
+                                                    </strong>
+                                                </div>
+                                            </div>
+
+                                            <div className="country__view">
+                                                View country
+                                                <span>→</span>
+                                            </div>
+                                        </div>
+                                    </article>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
+        </main>
+    );
 };
 
 export default AllCountries;

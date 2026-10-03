@@ -1,31 +1,47 @@
-import React from "react";
-
 const Filter = ({ onSelect }) => {
-  const selectHandler = (e) => {
-    const regionName = e.target.value;
-    onSelect(regionName);
-  };
+    const selectHandler = (event) => {
+        const regionName = event.target.value;
 
-  return (
-    <select onChange={selectHandler}>
-      <option className="option">Filter by Region</option>
-      <option className="option" value="Africa">
-        Africa
-      </option>
-      <option className="option" value="America">
-        America
-      </option>
-      <option className="option" value="Asia">
-        Asia
-      </option>
-      <option className="option" value="Europe">
-        Europe
-      </option>
-      <option className="option" value="Oceania">
-        Oceania
-      </option>
-    </select>
-  );
+        onSelect(regionName);
+    };
+
+    return (
+        <div className="filter__wrapper">
+            <span className="filter__icon">
+                ◉
+            </span>
+
+            <select
+                onChange={selectHandler}
+                defaultValue=""
+                aria-label="Filter countries by region"
+            >
+                <option value="" disabled>
+                    Filter by region
+                </option>
+
+                <option value="Africa">
+                    Africa
+                </option>
+
+                <option value="Americas">
+                    Americas
+                </option>
+
+                <option value="Asia">
+                    Asia
+                </option>
+
+                <option value="Europe">
+                    Europe
+                </option>
+
+                <option value="Oceania">
+                    Oceania
+                </option>
+            </select>
+        </div>
+    );
 };
 
 export default Filter;
